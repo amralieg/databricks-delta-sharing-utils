@@ -1,3 +1,8 @@
+# Databricks notebook source
+# MAGIC %pip install delta-sharing
+
+# COMMAND ----------
+
 import delta_sharing
 import uuid
 import re
@@ -292,3 +297,7 @@ class DeltaShareRecipient:
     display(self.__spark_sql(f"select status, source_table, target_table, num_affected_rows,\
     (unix_timestamp(completion_time)-unix_timestamp(started_time)) as duration_seconds,\
     message from {self.sync_runs_table} where sync_id in ({syncs}) order by duration_seconds desc;"))
+
+# COMMAND ----------
+
+
