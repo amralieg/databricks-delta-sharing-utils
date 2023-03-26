@@ -113,20 +113,3 @@ class DeltaShareProvider:
 dsp = DeltaShareProvider(share="amr_test_share_provider", recipient="amr_aws_Account", drop_if_exists=True)
 dsp.share_catalog("amrali_cat", enable_cdf=True)
 dsp.unshare_catalog("amrali_cat")
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC --create share if not exists x_y;
-# MAGIC --create recipient if not exists x_r;
-# MAGIC --grant select on share x_y to recipient x_r;
-# MAGIC revoke select on share x_y from recipient x_r;
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC DROP RECIPIENT amr_aws_Account;
-
-# COMMAND ----------
-
-
