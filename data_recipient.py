@@ -282,8 +282,8 @@ class DeltaShareRecipient:
     return spark.sql(sql)
 
   def __log(self, thing):
-    #print(thing)
-    #print()
+    print(thing)
+    print()
     pass
   
   def summerise(self, sync_ids:list):
@@ -300,12 +300,12 @@ class DeltaShareRecipient:
 
 # COMMAND ----------
 
-dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share')
-display(dsr.discover())
-dsr.share_sync()
-#dsd.share_sync(cache_locally=True, refresh_incrementally=True, clear_previous_cache=True, clear_sync_history=True,\
-               #primary_keys = {'db1.table1':'id', 'db1.table2':'idx'})
+dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share', catalog="amr_sharing_cat")
+#display(dsr.discover())
+#dsr.share_sync()
+dsr.share_sync(cache_locally=False, refresh_incrementally=False, clear_previous_cache=True, clear_sync_history=True,\
+               primary_keys = {'db1.table1':'id', 'db1.table2':'idx'})
 
 # COMMAND ----------
 
-
+# MAGIC %sql select * from amr_sharing_cat.db1.table1
