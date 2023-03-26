@@ -148,7 +148,7 @@ class DeltaShareRecipient:
       else:
         status = "FAILED"
         message = f'Target table {target} already exists. drop it manually before continuing or set clear_previous_cache=True.\
-        Note setting this option will drop this table "{target}" and clear all contect'
+        Note setting this option will drop this table "{target}" and clear all content'
         num_affected_rows = "null"
         num_updated_rows="null"
         num_deleted_rows="null"
@@ -297,6 +297,14 @@ class DeltaShareRecipient:
     display(self.__spark_sql(f"select status, source_table, target_table, num_affected_rows,\
     (unix_timestamp(completion_time)-unix_timestamp(started_time)) as duration_seconds,\
     message from {self.sync_runs_table} where sync_id in ({syncs}) order by duration_seconds desc;"))
+
+# COMMAND ----------
+
+dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share')
+display(dsr.discover())
+dsr.share_sync()
+#dsd.share_sync(cache_locally=True, refresh_incrementally=True, clear_previous_cache=True, clear_sync_history=True,\
+               #primary_keys = {'db1.table1':'id', 'db1.table2':'idx'})
 
 # COMMAND ----------
 
