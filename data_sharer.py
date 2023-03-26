@@ -1,12 +1,12 @@
 # Databricks notebook source
 class DeltaShareProvider:
-  def __init__(self, share:str, recipient:str, drop_if_exists:bool=False):
+  def __init__(self, share:str, recipient:str, recipient_databricks_id:str="", drop_if_exists:bool=False):
     self.share = share
     if drop_if_exists:
       self.drop_recipient(recipient)
       self.drop_share()
     self.__spark_sql(f"CREATE SHARE IF NOT EXISTS {share};")
-    self.add_recipient(recipient)
+    self.add_recipient(recipient, recipient_databricks_id)
     
   def drop_share(self):
     self.__spark_sql(f"DROP SHARE IF EXISTS {self.share};")
@@ -27,7 +27,6 @@ class DeltaShareProvider:
     self.__log(f'unsharing all databases in catalog {catalog} from share {self.share}')
     for database in databases:
       if database == "information_schema" or databases == "default":
-        self.__log(f"skipping sharing database {catalog}.{database}")
         continue
       self.unshare_database(f"{catalog}.{database}")
     self.__log(f'catalog {catalog} compeletly unshared from share {self.share}')
@@ -70,10 +69,16 @@ class DeltaShareProvider:
       self.__log(str(e))
     return self
   
-  def add_recipient(self, recipient:str):
+  def add_recipient(self, recipient:str, recipient_databricks_id:str=""):
     try:
-      display(self.__spark_sql(f'create recipient if not exists {recipient};'))
-      self.__log(f'recipient {recipient} created')
+      if recipient_databricks_id is None or recipient_databricks_id.strip()=="":
+        self.__log(f'open recipient {recipient} will be created. open the activation link provided in the table displayed below (scroll to the end), \
+        and share it with the recipient.')
+        display(self.__spark_sql(f'create recipient if not exists {recipient};'))
+      else:
+        display(self.__spark_sql(f'create recipient if not exists {recipient} using "{recipient_databricks_id}";'))
+        self.__log(f'databirkcs recipient {recipient} created using the sharing identifier provided. inform the recipient so they can start reading the shares.')
+      
       self.__spark_sql(f'GRANT SELECT on SHARE {self.share} TO RECIPIENT {recipient};')
       self.__log(f'recipient {recipient} granted SELECT on share {self.share}')
     except Exception as e:
@@ -97,12 +102,11 @@ class DeltaShareProvider:
     return self
     
   def __spark_sql(self, sql):
-    self.__log(sql)
+    #print(sql)
     return spark.sql(sql)
 
   def __log(self, thing):
-    print(thing)
-    print()
+    print("[info] " + thing)
     pass
   
   def __get_database_objects(self, object_type, source, selector):
