@@ -114,53 +114,72 @@ Remove a recipient and all their permissions from the share.
 ### DeltaShareRecipient Class (data_recipient.py)
 This is a Python class that provides various methods for working with Delta Sharing files. The class allows you to add share files, and perform operations such as syncing tables, refreshing the cache incrementally, and clearing sync history.
 
-###Prerequisite
+### Prerequisite
 - delta-sharing
 
-###Installation
+### Installation
 ```bash
 pip install delta-sharing
 ```
 
-###API Reference
+### API Reference
 
 ```python
 DeltaShareRecipient(share_file_loc:str, catalog:str="hive_metastore", table_prefix:str="")
 ```
 This method initializes the class with the given parameters.
+
 **share_file_loc (str)**: The path to the share file on dbfs or any other cloud storage location.
+
 **catalog (str, optional)**: The catalog to use for the tables. Defaults to "hive_metastore".
+
 **table_prefix (str, optional)**: The prefix to use for the tables. Defaults to "".
 
 ```python
 discover() -> pyspark.sql.DataFrame
 ```
 This method returns a DataFrame with all the information about the share file, including share, schema, and table.
-Returns:
+
+**Returns**:
+
 pyspark.sql.DataFrame: A dataframe containing the share, schema, and table.
 
 ```python
 share_sync(cache_locally:bool=False, refresh_incrementally:bool=False, clear_previous_cache:bool=False, clear_sync_history:bool=False, primary_keys:dict=dict()) -> list
 ```
 This method syncs all tables inside the share files.
+
 **Args**
+
 **cache_locally (bool, optional)**: Whether to cache the table locally. Defaults to False.
+
 **refresh_incrementally (bool, optional)**: Whether to refresh the cache incrementally, note CDF must be enabled on the source table. Defaults to False.
+
 **clear_previous_cache (bool, optional)**: Whether to clear the previous cache (warning: this will drop the tables and clear all content). Defaults to False.
+
 **clear_sync_history (bool, optional)**: Whether to clear the sync history. Defaults to False.
+
 **primary_keys (dict, optional)**: The primary keys for the the tables inside the share, this is needed for incremental updates to work. Defaults is empty {}, however you can pass it in this format {'table_x':'id1, id2, id3', 'table_y':'idx, idy'}.
+
 **Returns**:
+
 list: A list of sync ids.
+
 ```python
 table_sync(share:str, source:str, target:str, primary_keys:str, cache_locally:bool=False, refresh_incrementally:bool=False, clear_previous_cache:bool=False) -> str
 ```
 This method syncs a single table.
 
 **Args**:
+
 **share (str)**: The share name.
+
 **source (str)**: The source schema and table name in this format 'schema.table'.
+
 **target (str)**: The target schema and table name to which you want to save the source to, in this format 'schema.table'.
+
 Rest of arguments are exactly as share_sync
+
 **Returns**:
 str: The sync id.
 
@@ -168,7 +187,7 @@ str: The sync id.
 
 Authors
 
-Amr Ali
+[Amr Ali](https://www.linkedin.com/in/amralieg/)
 
 License
 
