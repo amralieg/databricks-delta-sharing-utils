@@ -1,73 +1,30 @@
-# delta-share-utils
-Delta Sharing utils includes set of python files that makes it very easy to sync tables shared using Delta Sharing protocol
+# DeltaShareProvider
+The __init__ method initializes a DeltaShareProvider instance with the share name, recipient email address, and optional recipient_databricks_id and drop_if_exists arguments. If drop_if_exists is True, then the method first drops the recipient and the share if they already exist. Then it creates a share with the given share name if it doesn't already exist, and adds the recipient to the share.
 
-Delta Share Recipient
-Delta Share Recipient is a Python module that simplifies working with Delta Sharing files.
+The drop_share method drops the share with the share name if it exists.
 
-Installation
-python
-Copy code
-!pip install delta-sharing
-Usage
-python
-Copy code
-import delta_sharing
+The share_catalog method shares all databases in the given catalog to the share with the share name. If enable_cdf is True, it also enables Change Data Feed (CDF) for each shared table. The method skips sharing the information_schema and default databases.
 
-# Instantiate DeltaShareRecipient
-d = DeltaShareRecipient(share_file_loc, catalog, table_prefix)
+The unshare_catalog method unshares all databases in the given catalog from the share with the share name. The method skips unsharing the information_schema and default databases.
 
-# Get all tables in the share
-d.discover()
+The share_database method shares all tables in the given database to the share with the share name. If enable_cdf is True, it also enables Change Data Feed (CDF) for each shared table.
 
-# Sync a whole share
-d.share_sync()
+The unshare_database method unshares all tables in the given database from the share with the share name.
 
-# Sync a single table
-d.table_sync(share, source, target, primary_keys, cache_locally, refresh_incrementally, clear_previous_cache)
-DeltaShareRecipient
-DeltaShareRecipient allows you to add a share file and perform various operations that make it easy to work with Delta Share files.
+The share_table method shares the given table to the share with the share name. If enable_cdf is True, it enables Change Data Feed (CDF) for the table. If the table is already shared, the method updates the share to include the table's history.
 
-Constructor
-python
-Copy code
-def __init__(self, share_file_loc:str, catalog:str="hive_metastore", table_prefix:str=""):
-Arguments
-share_file_loc: The location of the share file.
-catalog: The name of the catalog to use. Default is "hive_metastore".
-table_prefix: The prefix to add to the table name. Default is an empty string.
-discover()
-python
-Copy code
-def discover(self):
-Returns a dataframe with all the information about the share file, including share, schema, and table.
+The unshare_table method unshares the given table from the share with the share name.
 
-share_sync()
-python
-Copy code
-def share_sync(self, cache_locally:bool=False, refresh_incrementally:bool=False, clear_previous_cache:bool=False, clear_sync_history:bool=False, primary_keys:dict=dict()) -> list:
-Syncs a whole share.
+The add_recipient method adds the given recipient to the share with the share name. If a recipient_databricks_id is provided, the method creates a Databricks recipient using the sharing identifier provided. The method grants the recipient SELECT access to the share. If the recipient_databricks_id is not provided, the method provides instructions to the recipient on how to create an open recipient.
 
-Arguments
-cache_locally: Whether to cache the table locally. Default is False.
-refresh_incrementally: Whether to refresh the cache incrementally. Default is False.
-clear_previous_cache: Whether to clear the previous cache. Default is False.
-clear_sync_history: Whether to clear the sync history. Default is False.
-primary_keys: A dictionary of primary keys for the tables to be synced. Default is an empty dictionary.
-table_sync()
-python
-Copy code
-def table_sync(self, share:str, source:str, target:str, primary_keys:str, cache_locally:bool=False, refresh_incrementally:bool=False, clear_previous_cache:bool=False) -> str:
-Syncs a single table.
+The remove_recipient method removes the given recipient from the share with the share name.
 
-Arguments
-share: The name of the share.
-source: The name of the source table.
-target: The name of the target table.
-primary_keys: A dictionary of primary keys for the table to be synced. Default is an empty dictionary.
-cache_locally: Whether to cache the table locally. Default is False.
-refresh_incrementally: Whether to refresh the cache incrementally. Default is False.
-clear_previous_cache: Whether to clear the previous cache. Default is False.
-Requirements
-Python 3.6 or higher.
-Delta Sharing Python module (delta-sharing).
-Apache Spark.
+The drop_recipient method drops the given recipient if it exists.
+
+The __spark_sql method executes a SQL statement using the Apache Spark SQL API.
+
+The __log method prints the given thing with an "[info]" prefix.
+
+
+
+
