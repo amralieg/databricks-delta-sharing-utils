@@ -30,7 +30,7 @@ display(dsr.discover())
 
 # this will start sync the data from the data sharer to the data recipients, diffrent options can be used:
 dsr.share_sync(cache_locally=True, refresh_incrementally=True,\
-               clear_previous_cache=True, clear_sync_history=True,\
+               clear_previous_cache=False, clear_sync_history=False,\
                primary_keys = {'db1.table1':'id', 'db1.table2':'idx'})
 ```
 
