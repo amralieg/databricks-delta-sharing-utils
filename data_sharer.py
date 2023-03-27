@@ -51,6 +51,7 @@ class DeltaShareProvider:
   def share_table(self, table:str, enable_cdf:bool=False):
     try:
       if enable_cdf:
+        self.unshare_table(table) #unshare it first to enable cdf
         self.__spark_sql(f'ALTER TABLE {table} SET TBLPROPERTIES (delta.enableChangeDataFeed = true);')
         self.__spark_sql(f'ALTER SHARE {self.share} ADD TABLE {table} WITH HISTORY;')
         self.__log(f'table {table} added to share {self.share} with CDF and History turned on')
