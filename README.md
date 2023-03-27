@@ -58,7 +58,7 @@ Create an instance of the class with the following parameters:
 
 **recipient_databricks_id**: (optional) The identifier of the Databricks workspace where the recipient resides. Required when sharing with external Databricks workspaces.
 
-**drop_if_exists**: (optional) Set to True to delete the recipient and the share if they already exist.
+**drop_if_exists**: (optional) Set to True to delete the recipient and the share if they already exist before creating them again.
 
 ```python
 share_catalog(catalog:str, enable_cdf:bool=False)
