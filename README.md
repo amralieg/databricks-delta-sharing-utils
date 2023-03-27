@@ -29,11 +29,6 @@ dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share')
 display(dsr.discover())
 
 # this will start sync the data from the data sharer to the data recipients, diffrent options can be used:
-# cache_locally (bool, optional): Whether to cache the table locally. Defaults to False.
-# refresh_incrementally (bool, optional): Whether to refresh the cache incrementally, note CDF must be enabled on the source table. Defaults to False.
-# clear_previous_cache (bool, optional): Whether to clear the previous cache (warning: this will drop the tables and clear all content). Defaults to False.
-# clear_sync_history (bool, optional): Whether to clear the sync history. Defaults to False.
-# primary_keys (dict, optional): The primary keys for the the tables inside the share, this is needed for incremental updates to work. Defaults is empty {}
 dsr.share_sync(cache_locally=True, refresh_incrementally=True,\
                clear_previous_cache=True, clear_sync_history=True,\
                primary_keys = {'db1.table1':'id', 'db1.table2':'idx'})
