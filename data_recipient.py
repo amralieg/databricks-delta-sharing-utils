@@ -63,6 +63,7 @@ class DeltaShareRecipient:
         clear_sync_history (bool, optional): Whether to clear the sync history. Defaults to False.
         primary_keys (dict, optional): The primary keys for the the tables inside the share, this is needed for incremental updates to work. Defaults is empty {},\
         however you can pass it in this format {'table_x':'id1, id2, id3', 'table_y':'idx, idy'}.
+        num_threads (int, optional): how many concurrent threads to be used for sync
 
     Returns:
         list: A list of sync ids.
