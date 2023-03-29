@@ -4,6 +4,8 @@
 # COMMAND ----------
 
 import delta_sharing
+from concurrent.futures import ThreadPoolExecutor
+import threading 
 import uuid
 import re
 import sys
@@ -29,6 +31,8 @@ class DeltaShareRecipient:
     self.sync_runs_table = f"{self.sync_runs_db}.{self.table_prefix}sync_runs"
     #get current user
     self.current_user= self.__spark_sql("select current_user() as user;").collect()[0][0]
+    self.__log("", f"delta sharing recipient initiated, shared tabled will be stored in catalog {catalog}")
+    self.lock = threading.Lock()
 
   def discover(self):
     """
@@ -40,15 +44,15 @@ class DeltaShareRecipient:
     return spark.createDataFrame(data=self.deltasharing_client.list_all_tables(), schema = ["table","schema","share"]).select("share","schema","table")
   
   def __clear_local_cache(self, cache_locally:bool=False, refresh_incrementally:bool=False, clear_sync_history:bool=False):
+    self.__log("", f"cache managment started refresh_incrementally={refresh_incrementally}, clear_sync_history={clear_sync_history}")
     self.__spark_sql(f"CREATE DATABASE IF NOT EXISTS {self.catalog}.{self.sync_runs_db};")
     if clear_sync_history:
       if refresh_incrementally:
-        self.__log("[info] clear_sync_history is ignored since refresh_incrementally is set to True")
-      else:
-        self.__spark_sql(f"DROP TABLE IF EXISTS {self.catalog}.{self.sync_runs_table};")
+        self.__log("all", "warning: refresh_incrementally=True and clear_sync_history=True, this will practically make incremental updates not effective, set clear_sync_history=False to clear this warning.")
+      self.__spark_sql(f"DROP TABLE IF EXISTS {self.catalog}.{self.sync_runs_table};")
 
   def share_sync(self, cache_locally:bool=False, refresh_incrementally:bool=False,\
-                 clear_previous_cache:bool=False, clear_sync_history:bool=False, primary_keys:dict=dict())->list:
+                 clear_previous_cache:bool=False, clear_sync_history:bool=False, primary_keys:dict=dict(), num_threads=1)->list:
     """
     This method will sync all tables inside the share files.
 
@@ -63,12 +67,18 @@ class DeltaShareRecipient:
     Returns:
         list: A list of sync ids.
     """
+    self.__log("", f"sync operation started and will utilise {num_threads} thread of the assigned cluster driver node")
     sync_ids = list()
-    self.__clear_local_cache(cache_locally, clear_previous_cache, clear_sync_history)
-    for table in self.deltasharing_client.list_all_tables():
-      sync_id = self.table_sync(table.share, f"{table.schema}.{table.name}", f"{self.catalog}.{table.schema}.{self.table_prefix}{table.name}",\
-                                primary_keys.get(f"{table.schema}.{table.name}"), cache_locally, refresh_incrementally, clear_previous_cache)
-      sync_ids.append(sync_id)
+    self.__clear_local_cache(cache_locally, refresh_incrementally, clear_sync_history)
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+      futures = []
+      for table in self.deltasharing_client.list_all_tables():
+          future = executor.submit(self.table_sync, table.share, f"{table.schema}.{table.name}",\
+                                   f"{self.catalog}.{table.schema}.{self.table_prefix}{table.name}",\
+                                   primary_keys.get(f"{table.schema}.{table.name}"), cache_locally, refresh_incrementally, clear_previous_cache)
+          futures.append(future)
+      for future in futures:
+          sync_ids.append(future.result())
     self.summerise(sync_ids)
     return sync_ids
 
@@ -89,6 +99,7 @@ class DeltaShareRecipient:
     Returns:
         str: The sync id.
     """
+    self.__log(source, f"sync operation started")
     sync_id=None
     if cache_locally == False:
       sync_type = "remotely-stored"
@@ -101,14 +112,14 @@ class DeltaShareRecipient:
     try:
       for table in self.deltasharing_client.list_all_tables():
         if table.share == share and f"{table.schema}.{table.name}" == source:
+          self.__log(source, f"database {self.catalog}.{table.schema} will be created")
           self.__spark_sql(f"CREATE DATABASE IF NOT EXISTS {self.catalog}.{table.schema};")
           break
               
       if clear_previous_cache:
         if refresh_incrementally:
-          self.__log("[info] clear_previous_cache is ignored since refresh_incrementally is set to True")
-        else:
-          self.__spark_sql(f"DROP TABLE IF EXISTS {target};")
+          self.__log("", "warning: refresh_incrementally=True and clear_previous_cache=True, this will practically make incremental updates not effective, set clear_previous_cache=False to clear this warning.")
+        self.__spark_sql(f"DROP TABLE IF EXISTS {target};")
 
       status = 'STARTED'
       message = "table_sync started"
@@ -120,7 +131,7 @@ class DeltaShareRecipient:
     except Exception as e:
       status = "FAILED"
       message = "table_sync failed, exception message: " + str(e).replace('\'','"')
-      self.__log(message)
+      self.__log(source, message)
       sync_id=self.__log_table_sync_event(sync_id, share, source, starting_from_version, target, sync_type,\
                                           status, message,'null', 'null', 'null', 'null')
       raise e
@@ -131,8 +142,9 @@ class DeltaShareRecipient:
     table_url = file_loc + f"#{share}.{source}" #must be in driver node fs
     (last_sync_type, starting_from_version, last_completion_timestamp) = self.__get_last_sync_version(source)
     max_table_version = self.__get_max_table_version(table_url, source)
-    self.__log(f"table {source} max version is {max_table_version}")
+    self.__log(source, f"table starting_From_version={starting_from_version} and max_table_version={max_table_version}")
     if sync_type == "remotely-stored":
+      self.__log(source, f"table will be created remotely-stored")
       if spark.catalog.tableExists(target) == False:
         self.__spark_sql(f"""CREATE TABLE {target}
                      USING deltaSharing
@@ -165,7 +177,7 @@ class DeltaShareRecipient:
     (sync_type == "locally-cashed-incrementally-refreshed" and starting_from_version is None) or
     (sync_type == "locally-cashed-incrementally-refreshed" and isinstance(max_table_version, str)) or
     (sync_type == "locally-cashed-incrementally-refreshed" and starting_from_version > max_table_version)):
-      self.__log("starting locally-cashed-fully-refreshed")
+      self.__log(source, "starting locally-cashed-fully-refreshed")
       delta_sharing.load_as_spark(table_url).write.saveAsTable(target, format="delta", mode="overwrite")
       status = "SUCCESS"
       message = "table created as fully refreshed local table"
@@ -179,17 +191,19 @@ class DeltaShareRecipient:
       num_deleted_rows="null"
       num_inserted_rows=num_affected_rows
     elif sync_type == "locally-cashed-incrementally-refreshed":
-      self.__log("starting locally-cashed-incrementally-refreshed")
+      self.__log(source, "starting locally-cashed-incrementally-refreshed")
       if starting_from_version == max_table_version:
+        self.__log(source, f"table is up to date")
         status = "SUCCESS"
         message = f"update skipped, table {target} is up to date and last sync version is {starting_from_version}"
-        self.__log(message)
+        self.__log("", message)
         num_affected_rows = 0
         num_updated_rows=0
         num_deleted_rows=0
         num_inserted_rows=0
       else:
         if starting_from_version<=0 or starting_from_version > max_table_version:
+          self.__log(source, f"table starting_from_version is not applicable, resetting to use max_table_version instead")
           starting_from_version = max_table_version
         (status, message, starting_from_version, num_affected_rows, num_updated_rows, num_deleted_rows, num_inserted_rows) = \
         self.__sync_incrementally(sync_id, share, table_url, source, starting_from_version, max_table_version, target, primary_keys, last_sync_type,\
@@ -204,6 +218,7 @@ class DeltaShareRecipient:
                            last_sync_type, last_completion_timestamp):  
     
     if primary_keys is None or primary_keys.strip()=="":
+      self.__log(source, f"No primary keys specified to use for MERGE INTO")
       raise Exception("can not perform incremental refresh without specifying table primary keys. you can pass primary keys as dictionary,\
                       for example {'table_x':'pk1, pk2', 'table_y':'pk3, pk4'}")
     
@@ -241,12 +256,15 @@ class DeltaShareRecipient:
     from {self.sync_runs_table} where source_table='{source}' and status='SUCCESS' and source_last_sync_version is not null)\
     order by completion_time desc limit 1;")
     if last_version_df.isEmpty() == False:
+      self.__log(source, f"previous sync found")
       return (last_version_df.collect()[0][0], last_version_df.collect()[0][1], last_version_df.collect()[0][2])
     else:
+      self.__log(source, f"table has no usable sync history to use for incremental sync")
       return (None, None, None)
   
   def __get_max_table_version(self, table_url:str, source:str)->int:
     try:
+      self.__log(source, f"trying to get max_table_history")
       delta_sharing.load_table_changes_as_spark(url=table_url, starting_version=sys.maxsize).count()
     except Exception as e: #as expected the previous statement failed, lets extract the max table version from the error message
       pattern = r"latest version of the table\((\d+)\)"
@@ -259,53 +277,122 @@ class DeltaShareRecipient:
   
   def __log_table_sync_event(self, sync_id:str, share:str, source:str, starting_from_version:int, target:str, sync_type:str,\
                              status:str, message:str, num_affected_rows, num_updated_rows,num_deleted_rows, num_inserted_rows):
-    if spark.catalog.tableExists(self.sync_runs_table) == False:
-      #create sync_log table if not exists
-      self.__spark_sql(f"create table {self.sync_runs_table} (sync_id string, share string, source_table string, source_last_sync_version int,\
-      target_table string, started_by string, started_time timestamp, completion_time timestamp, status string, sync_type string,\
-      num_affected_rows int, num_updated_rows int, num_deleted_rows int, num_inserted_rows int, message string);")
-    if sync_id is None:
-      sync_id = str(uuid.uuid4())
-      self.__spark_sql(f"""insert into {self.sync_runs_table} values('{sync_id}', '{share}', '{source}', null, '{target}', '{self.current_user}',\
-      current_timestamp(), null, '{status}', '{sync_type}', null, null, null, null, '{message}');""")
-    else:
-      self.__spark_sql(f"update {self.sync_runs_table} set source_last_sync_version={starting_from_version}, completion_time = current_timestamp(),\
-      status='{status}', sync_type='{sync_type}', num_affected_rows={num_affected_rows}, num_updated_rows = {num_updated_rows},\
-      num_deleted_rows = {num_deleted_rows}, num_inserted_rows={num_inserted_rows}, message='{message}' where sync_id='{sync_id}';")
+    with self.lock:
+      if spark.catalog.tableExists(self.sync_runs_table) == False:
+        #create sync_log table if not exists
+        self.__spark_sql(f"create table {self.sync_runs_table} (sync_id string, share string, source_table string, source_last_sync_version int,\
+        target_table string, started_by string, started_time timestamp, completion_time timestamp, status string, sync_type string,\
+        num_affected_rows int, num_updated_rows int, num_deleted_rows int, num_inserted_rows int, message string);")
+      if sync_id is None:
+        sync_id = str(uuid.uuid4())
+        self.__spark_sql(f"""insert into {self.sync_runs_table} values('{sync_id}', '{share}', '{source}', null, '{target}', '{self.current_user}',\
+        current_timestamp(), null, '{status}', '{sync_type}', null, null, null, null, '{message}');""")
+      else:
+        self.__spark_sql(f"update {self.sync_runs_table} set source_last_sync_version={starting_from_version}, completion_time = current_timestamp(),\
+        status='{status}', sync_type='{sync_type}', num_affected_rows={num_affected_rows}, num_updated_rows = {num_updated_rows},\
+        num_deleted_rows = {num_deleted_rows}, num_inserted_rows={num_inserted_rows}, message='{message}' where sync_id='{sync_id}';") 
     return sync_id
 
   def __get_table_count(self, target):
       return self.__spark_sql(f"select count(*) from {target};").collect()[0][0]
 
   def __spark_sql(self, sql):
-    self.__log(sql)
+    #print(sql)
     return spark.sql(sql)
 
-  def __log(self, thing):
-    print(thing)
+  def __log(self, id, msg):
+    if id == "":
+      print(msg)
+    else:
+      print(f"[info - {id}] {msg}")
     print()
     pass
   
-  def summerise(self, sync_ids:list):
+  def summerise(self, sync_ids:list, full_summary=False):
     """
     This method will display the summary of the sync operations performed.
 
     Args:
         sync_ids (list): A list of sync ids.
     """
+    self.__log("", "starting summurisation of sync operation")
     syncs = (', '.join('"' + sync_id + '"' for sync_id in sync_ids))
-    display(self.__spark_sql(f"select status, source_table, target_table, num_affected_rows,\
-    (unix_timestamp(completion_time)-unix_timestamp(started_time)) as duration_seconds,\
-    message from {self.sync_runs_table} where sync_id in ({syncs}) order by duration_seconds desc;"))
+    if full_summary:
+      display(self.__spark_sql(f"select * from {self.sync_runs_table} where sync_id in ({syncs}) order by completion_time desc;"))
+    else:
+      display(self.__spark_sql(f"select status, source_table, target_table, num_affected_rows,\
+      (unix_timestamp(completion_time)-unix_timestamp(started_time)) as duration_seconds,\
+      message from {self.sync_runs_table} where sync_id in ({syncs}) order by duration_seconds desc;"))
 
 # COMMAND ----------
 
-dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share', catalog="amr_sharing_cat")
+dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share')
 #display(dsr.discover())
 #dsr.share_sync()
-dsr.share_sync(cache_locally=False, refresh_incrementally=False, clear_previous_cache=True, clear_sync_history=True,\
-               primary_keys = {'db1.table1':'id', 'db1.table2':'idx'})
+dsr.share_sync(cache_locally=True, refresh_incrementally=True, clear_previous_cache=False, clear_sync_history=False,\
+               primary_keys = {'db1.table1':'id', 'db1.table2':'idx'}, num_threads=3)
 
 # COMMAND ----------
 
-# MAGIC %sql select * from amr_sharing_cat.db1.table1
+# MAGIC %sql create catalog amr_sharing_cat;
+
+# COMMAND ----------
+
+import multiprocessing
+
+class MyClass:
+    def do_something(self, x):
+        self.deltasharing_client = delta_sharing.SharingClient('/dbfs/FileStore/tables/amr_azure_share.share'.replace("dbfs:", "/dbfs/"))
+        print(self.deltasharing_client.list_all_tables())
+        print(str(x)+"\n")
+
+    def main(self):
+        # Create a Process Pool          
+        args = [x for x in range(1, 10)]
+        with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
+          sync_ids = pool.map(self.do_something, args)
+          pool.close()
+          pool.join()
+
+
+x = MyClass()
+x.main()
+
+# COMMAND ----------
+
+import dill
+from multiprocessing import Process  # Use the standard library only
+import os
+
+class DillProcess(Process):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._target = dill.dumps(self._target)  # Save the target function as bytes, using dill
+
+    def run(self):
+        if self._target:
+            self._target = dill.loads(self._target)    # Unpickle the target function before executing
+            self._target(*self._args, **self._kwargs)  # Execute the target function
+
+
+def calc(num1, num2):
+
+    def addi(num1, num2):
+        print(num1 + num2)
+
+    m = DillProcess(target=addi, args=(num1, num2))  # Note how we use DillProcess, and not multiprocessing.Process
+    m.start()
+
+    print("here is main", os.getpid())
+    m.join()
+
+
+if __name__ == "__main__":
+    # creating processes
+    calc(5, 6)
+
+
+# COMMAND ----------
+
+
