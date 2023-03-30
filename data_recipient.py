@@ -5,6 +5,7 @@
 
 import delta_sharing
 from concurrent.futures import ThreadPoolExecutor
+import multiprocessing
 import threading 
 import uuid
 import re
@@ -14,7 +15,7 @@ class DeltaShareRecipient:
   """
   This class allows you to add a share files, and perform various operations that make it easy to work with delta share files.
   """
-  def __init__(self, share_file_loc:str, catalog:str="hive_metastore", table_prefix:str=""):
+  def __init__(self, share_file_loc:str, databricks_sharing_identifier:str="", catalog:str="hive_metastore", table_prefix:str=""):
     """
     Constructor method to initialize the class with the given parameters.
 
@@ -23,7 +24,19 @@ class DeltaShareRecipient:
         catalog (str, optional): The catalog to use for the tables. Defaults to "hive_metastore".
         table_prefix (str, optional): The prefix to use for the tables. Defaults to "".
     """
+    if (share_file_loc=="" and databricks_sharing_identifier==""):
+      raise Exception("You cannot use both share_file_loc and databricks_sharing_identifier, you can use either one of them.")
+    elif share_file_loc!="" and databricks_sharing_identifier!="":
+      raise Exception("You must provide value for either share_file_loc or databricks_sharing_identifier, you cannot leave both empty.")
+    if databricks_sharing_identifier != "":
+      self.sharing_type = "D2D" # databricks-to-databricks
+      if catalog == "hive_metastore":
+        raise Exception("You must provide catalog name (other than hive_metastor) if you are sharing data from another databricks using sharing identifier.")
+    else:
+      self.sharing_type = "D2O" # databricks-to-open
+    
     self.share_file_loc = share_file_loc
+    self.databricks_sharing_identifier = databricks_sharing_identifier
     self.table_prefix = table_prefix
     self.catalog = catalog
     self.deltasharing_client = delta_sharing.SharingClient(share_file_loc.replace("dbfs:", "/dbfs/"))
@@ -51,10 +64,10 @@ class DeltaShareRecipient:
         self.__log("all", "warning: refresh_incrementally=True and clear_sync_history=True, this will practically make incremental updates not effective, set clear_sync_history=False to clear this warning.")
       self.__spark_sql(f"DROP TABLE IF EXISTS {self.catalog}.{self.sync_runs_table};")
 
-  def share_sync(self, cache_locally:bool=False, refresh_incrementally:bool=False,\
-                 clear_previous_cache:bool=False, clear_sync_history:bool=False, primary_keys:dict=dict(), num_threads=1)->list:
+  def share_sync(self, share:str="", cache_locally:bool=False, refresh_incrementally:bool=False,\
+                 clear_previous_cache:bool=False, clear_sync_history:bool=False, primary_keys:dict=dict(), num_threads=-1)->list:
     """
-    This method will sync all tables inside the share files.
+    This method will sync all tables inside a aspecific share, if no share provided, it will sync all tables, from all shares.
 
     Args:
         cache_locally (bool, optional): Whether to cache the table locally. Defaults to False.
@@ -68,14 +81,19 @@ class DeltaShareRecipient:
     Returns:
         list: A list of sync ids.
     """
-    self.__log("", f"sync operation started and will utilise {num_threads} thread of the assigned cluster driver node")
+    if num_threads == -1:
+      num_threads = multiprocessing.cpu_count()
+    self.__log("", f"sync operation started and will utilise {num_threads} threads of the assigned cluster driver node")
     sync_ids = list()
     self.__clear_local_cache(cache_locally, refresh_incrementally, clear_sync_history)
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
       futures = []
       for table in self.deltasharing_client.list_all_tables():
-          future = executor.submit(self.table_sync, table.share, f"{table.schema}.{table.name}",\
-                                   f"{self.catalog}.{table.schema}.{self.table_prefix}{table.name}",\
+        if share=="" or (share!="" and table.share == share):
+          target_schema = re.sub(r"[^a-zA-Z0-9_]+", "_", table.schema)
+          target_name = re.sub(r"[^a-zA-Z0-9_]+", "_", table.name)
+          future = executor.submit(self.table_sync, table.share, f"`{table.schema}`.`{table.name}`",\
+                                   f"{self.catalog}.{target_schema}.{self.table_prefix}{target_name}",\
                                    primary_keys.get(f"{table.schema}.{table.name}"), cache_locally, refresh_incrementally, clear_previous_cache)
           futures.append(future)
       for future in futures:
@@ -83,7 +101,7 @@ class DeltaShareRecipient:
     self.summerise(sync_ids)
     return sync_ids
 
-  def table_sync(self, share:str, source:str, target:str, primary_keys:str, cache_locally:bool=False,\
+  def table_sync(self, share:str, source:str, target:str, primary_keys:str="", cache_locally:bool=False,\
                  refresh_incrementally:bool=False, clear_previous_cache:bool=False)->str:
     """
     This method will sync a single table.
@@ -99,21 +117,25 @@ class DeltaShareRecipient:
         clear_previous_cache (bool, optional): Whether to clear the previous cache (warning: this will drop the tables and clear all content). Defaults to False.
     Returns:
         str: The sync id.
-    """
-    self.__log(source, f"sync operation started")
-    sync_id=None
-    if cache_locally == False:
-      sync_type = "remotely-stored"
-    elif refresh_incrementally == True:
-      sync_type = "locally-cashed-incrementally-refreshed"
-    else:
-      sync_type = "locally-cashed-fully-refreshed"
-    if cache_locally==False and refresh_incrementally:
-      raise Exception("Can not have refresh_incrementally=True while table is cache_locally=False, set refresh_incrementally=False and try again.")
-    try:
+      """
+    try:  
+      self.__log(source, f"sync operation started")
+      sync_id=None
+      if cache_locally == False:
+        sync_type = "remotely-stored"
+      elif refresh_incrementally == True:
+        sync_type = "locally-cashed-incrementally-refreshed"
+      else:
+        sync_type = "locally-cashed-fully-refreshed"
+      if cache_locally==False and refresh_incrementally:
+        raise Exception("Can not have refresh_incrementally=True while table is cache_locally=False, set refresh_incrementally=False and try again.")
+
+      status = 'STARTED'
+      message = "table_sync started"
+      starting_from_version = -1
       for table in self.deltasharing_client.list_all_tables():
         if table.share == share and f"{table.schema}.{table.name}" == source:
-          self.__log(source, f"database {self.catalog}.{table.schema} will be created")
+          self.__log(source, f"database {self.catalog}.{table.schema} will be created if not exists.")
           self.__spark_sql(f"CREATE DATABASE IF NOT EXISTS {self.catalog}.{table.schema};")
           break
               
@@ -122,9 +144,6 @@ class DeltaShareRecipient:
           self.__log("", "warning: refresh_incrementally=True and clear_previous_cache=True, this will practically make incremental updates not effective, set clear_previous_cache=False to clear this warning.")
         self.__spark_sql(f"DROP TABLE IF EXISTS {target};")
 
-      status = 'STARTED'
-      message = "table_sync started"
-      starting_from_version = -1
       #insert initial entry recrod to log this run where
       sync_id=self.__log_table_sync_event(sync_id, share, source, starting_from_version, target, sync_type,\
                                           status, message,'null', 'null', 'null', 'null')
@@ -135,12 +154,11 @@ class DeltaShareRecipient:
       self.__log(source, message)
       sync_id=self.__log_table_sync_event(sync_id, share, source, starting_from_version, target, sync_type,\
                                           status, message,'null', 'null', 'null', 'null')
-      raise e
     return sync_id
 
   def __create_table(self, sync_id:str, share:str, source:str, target:str, primary_keys:str, sync_type:str):
     file_loc = self.share_file_loc.replace("/dbfs", "dbfs:")
-    table_url = file_loc + f"#{share}.{source}" #must be in driver node fs
+    table_url = f"{file_loc}#{share}.{source}".replace('`','') #must be in driver node fs
     (last_sync_type, starting_from_version, last_completion_timestamp) = self.__get_last_sync_version(source)
     max_table_version = self.__get_max_table_version(table_url, source)
     self.__log(source, f"table starting_From_version={starting_from_version} and max_table_version={max_table_version}")
@@ -149,7 +167,7 @@ class DeltaShareRecipient:
       if spark.catalog.tableExists(target) == False:
         self.__spark_sql(f"""CREATE TABLE {target}
                      USING deltaSharing
-                     LOCATION '{file_loc}#{share}.{source}';""")
+                     LOCATION '{table_url}';""")
 
         status = "SUCCESS"
         message = "table created as remote table"
@@ -299,6 +317,7 @@ class DeltaShareRecipient:
 
   def __spark_sql(self, sql):
     #print(sql)
+    #print()
     return spark.sql(sql)
 
   def __log(self, id, msg):
@@ -306,7 +325,6 @@ class DeltaShareRecipient:
       print(msg)
     else:
       print(f"[info - {id}] {msg}")
-    print()
     pass
   
   def summerise(self, sync_ids:list, full_summary=False):
@@ -332,3 +350,13 @@ dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share')
 #dsr.share_sync()
 dsr.share_sync(cache_locally=False, refresh_incrementally=False, clear_previous_cache=True, clear_sync_history=False,\
                primary_keys = {'db1.table1':'id', 'db1.table2':'idx'}, num_threads=3)
+
+# COMMAND ----------
+
+dsr = DeltaShareRecipient('/dbfs/FileStore/tables/open_datasets.share', table_prefix="amr_")
+display(dsr.discover())
+
+# COMMAND ----------
+
+#dsr.table_sync(share="delta_sharing", source="default.COVID_19_NYT", target="default.amr_COVID_19_NYT", cache_locally=True, refresh_incrementally=False, clear_previous_cache=True)
+dsr.share_sync(cache_locally=True, refresh_incrementally=False, clear_previous_cache=True, clear_sync_history=False)
