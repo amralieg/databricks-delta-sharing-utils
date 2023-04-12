@@ -26,7 +26,7 @@ dsp.share_table(table="my_database.my_table", enable_cdf=True)
 dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share')
 
 # this will display a list of all shares, and what tables are shared
-display(dsr.discover())
+dsr.discover()
 
 # this will start sync the data from the data sharer to the data recipients incrementally:
 dsr.create_incrementally_cached_tables("my_share", primary_keys={'table1':'key1, key2'})-
@@ -122,18 +122,18 @@ DeltaShareRecipient(share_profile_file_loc:str="", provider_sharing_identifier:s
 ```
 This method initializes the class with the given parameters.
 
-**share_profile_file_loc (str)**: The path to the share file on dbfs or any other cloud storage location.
+**share_profile_file_loc (str)**: The path to the share file on dbfs or any other cloud storage location, if you provided this, do not provide provider_sharing_identifier.
 
-**provider_sharing_identifier (str)**: Databricks sharing identifier of the provider of the data.
+**provider_sharing_identifier (str)**: Databricks sharing identifier of the provider of the data, if you provided this, do not provide share_profile_file_loc.
 
-**catalog (str, optional)**: The catalog to use for the tables. Defaults to "hive_metastore".
+**catalog (str, optional)**: The catalog to use for the tables. Defaults to "hive_metastore", mandatory if you provided provider_sharing_identifier.
 
 **table_prefix (str, optional)**: The prefix to use for the tables. Defaults to "".
 
 ```python
 discover() -> pyspark.sql.DataFrame
 ```
-This method returns a DataFrame with all the information about the share file, including share, schema, and table.
+This method displays a DataFrame with all the information about the share provided.
 
 **Returns**:
 
@@ -142,7 +142,7 @@ pyspark.sql.DataFrame: A dataframe containing the share, schema, and table.
 ```python
  def create_remotely_linked_tables(self, share:str)->list:
 ```
-This will mount all delta share tables as mirrored table of the source, no data copy is performed, and all queries will be run against the source directly (note this will incurre egress cost at the source).
+This will mount all delta share tables as mirrored table of the source, no data copy is performed, and all queries will be run against the source directly (note this will incurre egress cost each run at the source).
 
 **Args**
 
@@ -155,7 +155,7 @@ list: A list of sync ids.
 ```python
  def create_fully_cached_tables(self, share:str)->list:
 ```
-This will create all delta share tables locally as managed tables, and all tables will be exact copy of the source. you should run this method periodically to keep the cached copy up to date with the source.
+This will create all delta share tables locally as managed tables, and all tables will be exact copy of the source. you should run this method periodically to keep the cached copy up to date with the source. (note this will incurre egress cost each run at the source)
 
 **Args**
 
@@ -168,7 +168,7 @@ list: A list of sync ids.
 ```python
  def create_incrementally_cached_tables(self, share:str)->list:
 ```
-This will create all delta share tables locally as managed tables, and all tables will be exact copy of the source at the first run, however subsequent runs will only sync the table changes form source (Note, this assumes that CDF has been turned on at source, use the data_prodiver notebook to do that). you should run this method periodically to keep the cached copy up to date with the source.
+This will create all delta share tables locally as managed tables, and all tables will be exact copy of the source at the first run, however subsequent runs will only sync the table changes form source (Note, this assumes that CDF has been turned on at source, use the data_prodiver notebook to do that). you should run this method periodically to keep the cached copy up to date with the source. (note this will incurre egress cost each run at the source, however for only the changed data)
 
 **Args**
 
@@ -180,7 +180,14 @@ This will create all delta share tables locally as managed tables, and all table
 
 list: A list of sync ids.
 
-Authors
+### Limitations
+In some scenarios merging data at target may fail if the CDF contained conflicting changes at the same version, for example an insert immediatly followed by delete.
+
+### Legal Information
+This software is provided as-is and is not officially supported by Databricks through customer technical support channels. Support, questions, and feature requests can be communicated through the Issues page of this repo. Issues with the use of this code will not be answered or investigated by Databricks Support.
+
+
+#### Authors
 
 [Amr Ali](https://www.linkedin.com/in/amralieg/)
 
