@@ -28,10 +28,8 @@ dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share')
 # this will display a list of all shares, and what tables are shared
 display(dsr.discover())
 
-# this will start sync the data from the data sharer to the data recipients, diffrent options can be used:
-dsr.share_sync(cache_locally=True, refresh_incrementally=True,\
-               clear_previous_cache=False, clear_sync_history=False,\
-               primary_keys = {'db1.table1':'id', 'db1.table2':'idx'})
+# this will start sync the data from the data sharer to the data recipients incrementally:
+dsr.create_incrementally_cached_tables("my_share", primary_keys={'table1':'key1, key2'})-
 ```
 
 ### DeltaShareProvider Class (data_provider.py)
@@ -48,7 +46,7 @@ You can copy the entire code and use it in your Databricks notebook or import th
 The class allows you to share catalogs, databases, and tables to a recipient using a Databricks share. You can use the following methods to perform the actions.
 
 ```python
-DeltaShareProvider(share:str, recipient:str, recipient_databricks_id:str="", drop_if_exists:bool=False)
+DeltaShareProvider(share:str, recipient:str, recipient_sharing_identifier:str="", drop_if_exists:bool=False)
 ```
 Create an instance of the class with the following parameters:
 
@@ -56,7 +54,7 @@ Create an instance of the class with the following parameters:
 
 **recipient**: The name of the recipient who will receive the shared data.
 
-**recipient_databricks_id**: (optional) The identifier of the Databricks workspace where the recipient resides. Required when sharing with external Databricks workspaces.
+**recipient_sharing_identifier**: (optional) The identifier of the Databricks workspace where the recipient resides. Required when sharing with external Databricks workspaces.
 
 **drop_if_exists**: (optional) Set to True to delete the recipient and the share if they already exist before creating them again.
 
@@ -91,7 +89,7 @@ unshare_table(table:str)
 Remove a table from the share.
 
 ```python
-add_recipient(recipient:str, recipient_databricks_id:str="")
+add_recipient(recipient:str, recipient_sharing_identifier:str="")
 ```
 Add a recipient to the share. You can specify the Databricks workspace identifier for external workspaces.
 
@@ -120,11 +118,13 @@ pip install delta-sharing
 ### API Reference
 
 ```python
-DeltaShareRecipient(share_file_loc:str, catalog:str="hive_metastore", table_prefix:str="")
+DeltaShareRecipient(share_profile_file_loc:str="", provider_sharing_identifier:str="", catalog:str="hive_metastore", table_prefix:str="")
 ```
 This method initializes the class with the given parameters.
 
-**share_file_loc (str)**: The path to the share file on dbfs or any other cloud storage location.
+**share_profile_file_loc (str)**: The path to the share file on dbfs or any other cloud storage location.
+
+**provider_sharing_identifier (str)**: Databricks sharing identifier of the provider of the data.
 
 **catalog (str, optional)**: The catalog to use for the tables. Defaults to "hive_metastore".
 
@@ -140,45 +140,45 @@ This method returns a DataFrame with all the information about the share file, i
 pyspark.sql.DataFrame: A dataframe containing the share, schema, and table.
 
 ```python
-share_sync(cache_locally:bool=False, refresh_incrementally:bool=False, clear_previous_cache:bool=False, clear_sync_history:bool=False, primary_keys:dict=dict()) -> list
+ def create_remotely_linked_tables(self, share:str)->list:
 ```
-This method syncs all tables inside the share files.
+This will mount all delta share tables as mirrored table of the source, no data copy is performed, and all queries will be run against the source directly (note this will incurre egress cost at the source).
 
 **Args**
 
-**cache_locally (bool, optional)**: Whether to cache the table locally. Defaults to False.
-
-**refresh_incrementally (bool, optional)**: Whether to refresh the cache incrementally, note CDF must be enabled on the source table. Defaults to False.
-
-**clear_previous_cache (bool, optional)**: Whether to clear the previous cache (warning: this will drop the tables and clear all content). Defaults to False.
-
-**clear_sync_history (bool, optional)**: Whether to clear the sync history. Defaults to False.
-
-**primary_keys (dict, optional)**: The primary keys for the the tables inside the share, this is needed for incremental updates to work. Defaults is empty {}, however you can pass it in this format {'table_x':'id1, id2, id3', 'table_y':'idx, idy'}.
+**share (str)**: share name that contains the tables to be mounted.
 
 **Returns**:
 
 list: A list of sync ids.
 
 ```python
-table_sync(share:str, source:str, target:str, primary_keys:str, cache_locally:bool=False, refresh_incrementally:bool=False, clear_previous_cache:bool=False) -> str
+ def create_fully_cached_tables(self, share:str)->list:
 ```
-This method syncs a single table.
+This will create all delta share tables locally as managed tables, and all tables will be exact copy of the source. you should run this method periodically to keep the cached copy up to date with the source.
 
-**Args**:
+**Args**
 
-**share (str)**: The share name.
-
-**source (str)**: The source schema and table name in this format 'schema.table'.
-
-**target (str)**: The target schema and table name to which you want to save the source to, in this format 'schema.table'.
-
-Rest of arguments are exactly as share_sync
+**share (str)**: share name that contains the tables to be mounted.
 
 **Returns**:
-str: The sync id.
 
+list: A list of sync ids.
 
+```python
+ def create_incrementally_cached_tables(self, share:str)->list:
+```
+This will create all delta share tables locally as managed tables, and all tables will be exact copy of the source at the first run, however subsequent runs will only sync the table changes form source (Note, this assumes that CDF has been turned on at source, use the data_prodiver notebook to do that). you should run this method periodically to keep the cached copy up to date with the source.
+
+**Args**
+
+**share (str)**: share name that contains the tables to be mounted.
+
+**primary_keys (dict, optional)**: The primary keys for the the tables inside the share, this is needed for incremental updates to work. Defaults is empty {}, however you can pass it in this format {'table_x':'id1, id2, id3', 'table_y':'idx, idy'}.
+
+**Returns**:
+
+list: A list of sync ids.
 
 Authors
 
