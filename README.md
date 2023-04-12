@@ -5,7 +5,15 @@ Delta Sharing utils includes set of python files that makes it very easy to sync
 
 ## How it works
 
-These utilities are organised in 2 main notebooks, python/data_provider.ipynb and python/data_recipient.ipynb
+These utilities are organised in 2 main notebooks, python/data_provider.ipynb and python/data_recipient.ipynb.
+to use this code, follow these steps:
+1- At the data provider side:
+ A- clone this git repo to the data provider workspace
+ B- open the examples/data_provider notebook and use it to add create shares
+ 
+2- At the data recipient side:
+ A- clone this git repo to the data recipient workspace
+ B- open the examples/data_recipient notebook and use it to sync shares
 
 #### Examples for DeltaShareProvider Class (to run by the Data Provider)
 ```python
