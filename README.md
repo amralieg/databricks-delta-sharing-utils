@@ -5,9 +5,9 @@ Delta Sharing utils includes set of python files that makes it very easy to sync
 
 ## How it works
 
-These utilities are organised in 2 main python classes, data_provider.py and data_recipient.py
+These utilities are organised in 2 main notebooks, data_provider.ipynb and data_recipient.ipynb
 
-#### Examples for DeltaShareProvider Class (by the Data Sharer)
+#### Examples for DeltaShareProvider Class (to run by the Data Provider)
 ```python
 # create a DeltaShareProvider instance for a share 'my_share' and to be shared with a recipient 'my_recipient'
 # after running this code, you will get an activation link to be shared with your recipient to download the share file
@@ -20,7 +20,7 @@ dsp.share_database(database="my_database")
 dsp.share_table(table="my_database.my_table", enable_cdf=True)
 ```
 
-#### Examples for DeltaShareRecipient Class (by the Data Consumer)
+#### Examples for DeltaShareRecipient Class (to run by the Data Consumer)
 ```python
 # create a DeltaShareRecipient instance and point it to the share file location that was downloaded form the activation link
 dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share')
