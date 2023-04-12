@@ -56,8 +56,9 @@ dsr.create_incrementally_cached_tables("my_share", primary_keys={'table1':'key1,
 A python class that provides a simplified way to share Delta tables and databases between different Databricks workspaces. The class allows you to share catalogs, databases, and tables to a recipient by using a Databricks share.
 
 ### Prerequisites
-This class is built to be used in a Databricks environment. Ensure that you have access to a Databricks workspace, and you are familiar with Python, SQL, and Delta.
-The DeltaShareProvider requires a metastore admin previlige so you can create shares and add recipients.
+- This class is built to be used in a Databricks Runtime Environment 12.0+ (DBR 12.0+). 
+- Ensure that you have access to a Databricks workspace, and you are familiar with Python, SQL, and Delta.
+- The DeltaShareProvider requires a metastore admin previlige so you can create shares and add recipients.
 
 ### Installation
 You can copy the entire code and use it in your Databricks notebook or import the class to your codebase.
@@ -66,7 +67,7 @@ You can copy the entire code and use it in your Databricks notebook or import th
 The class allows you to share catalogs, databases, and tables to a recipient using a Databricks share. You can use the following methods to perform the actions.
 
 ```python
-DeltaShareProvider(share:str, recipient:str, recipient_sharing_identifier:str="", drop_if_exists:bool=False)
+DeltaShareProvider(share:str, recipient:str, recipient_sharing_identifier:str="", drop_share_if_exists:bool=False)
 ```
 Create an instance of the class with the following parameters:
 
@@ -76,7 +77,7 @@ Create an instance of the class with the following parameters:
 
 **recipient_sharing_identifier**: (optional) The identifier of the Databricks workspace where the recipient resides. Required when sharing with external Databricks workspaces.
 
-**drop_if_exists**: (optional) Set to True to delete the recipient and the share if they already exist before creating them again.
+**drop_share_if_exists**: (optional) Set to True to delete the recipient and the share if they already exist before creating them again.
 
 ```python
 share_catalog(catalog:str, enable_cdf:bool=False)
@@ -128,6 +129,7 @@ Remove a recipient and all their permissions from the share.
 This is a Python class that provides various methods for working with Delta Sharing files. The class allows you to add share files, and perform operations such as syncing tables, refreshing the cache incrementally, and clearing sync history.
 
 ### Prerequisite
+- This class is built to be used in a Databricks Runtime Environment 12.0+ (DBR 12.0+).
 - delta-sharing
 
 ### Installation
