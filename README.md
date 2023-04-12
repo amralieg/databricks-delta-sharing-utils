@@ -1,7 +1,14 @@
 
 # Databricks Delta Sharing Utils
 
-Databricks Delta Sharing utils includes set of python notebooks that makes it very easy to sync tables shared using Delta Sharing protocol on Databricks platform.
+Databricks Delta Sharing utils includes set of python notebooks that makes it very easy to sync tables shared using Delta Sharing protocol on Databricks platform. The utils support the following sync types:
+
+1- Mount table locally at the recipient side to mirror tables at the provider side
+
+2- Mount table locally at the recipient side as managed **full replica** table of the tables at the provider side
+
+3- Mount table locally at the recipient side as managed **incremental replica** table of the tables at the provider side
+
 
 ## How it works
 
