@@ -45,7 +45,7 @@ dsr.discover()
 dsr.create_incrementally_cached_tables("my_share", primary_keys={'table1':'key1, key2'})-
 ```
 
-### DeltaShareProvider Class (data_provider.py)
+### DeltaShareProvider Class (python/data_provider.ipynb)
 A python class that provides a simplified way to share Delta tables and databases between different Databricks workspaces. The class allows you to share catalogs, databases, and tables to a recipient by using a Databricks share.
 
 ### Prerequisites
@@ -117,7 +117,7 @@ drop_recipient(recipient:str)
 Remove a recipient and all their permissions from the share.
 
 
-### DeltaShareRecipient Class (data_recipient.py)
+### DeltaShareRecipient Class (python/data_recipient.ipynb)
 This is a Python class that provides various methods for working with Delta Sharing files. The class allows you to add share files, and perform operations such as syncing tables, refreshing the cache incrementally, and clearing sync history.
 
 ### Prerequisite
