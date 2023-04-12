@@ -1,7 +1,7 @@
 
-# Delta Share Utils
+# Databricks Delta Sharing Utils
 
-Delta Sharing utils includes set of python files that makes it very easy to sync tables shared using Delta Sharing protocol on Databricks platform.
+Databricks Delta Sharing utils includes set of python notebooks that makes it very easy to sync tables shared using Delta Sharing protocol on Databricks platform.
 
 ## How it works
 
