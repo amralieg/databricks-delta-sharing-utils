@@ -3,12 +3,21 @@
 
 # COMMAND ----------
 
-# initialise data recipient class, provide one of share_profile_file_lo or provider_sharing_identifier, but not both at the same time
-dsr = DeltaShareRecipient(share_profile_file_loc="<share-profile-location>", provider_sharing_identifier="<data-provider-sharing-identifier>", catalog="<catalog-name>")
+# MAGIC %md
+# MAGIC ### Delta Share Recipient Example
+# MAGIC You must run this on a Single Node Cluster with Single User
+# MAGIC Before you run this example, make sure you create catalog _open_datasets_ using this command:
+# MAGIC ```CREATE CATALOG _open_datasets_;```
+# MAGIC if you do not have create catalog permission, use catalog hive_metastore
+
+# COMMAND ----------
+
+# initialise data recipient class, with an open datasets share profile.
+dsr = DeltaShareRecipient(share_profile_file_loc="https://databricks-datasets-oregon.s3-us-west-2.amazonaws.com/delta-sharing/share/open-datasets.share", catalog="_open_datasets_")
 #run discover to list all available shares to you, so you pick one of these share to use it in the next call
 dsr.discover()
 
 # COMMAND ----------
 
 #start incremental sync of all tables inside the share 'amr_test_share_provider' which you discovered in the last step
-dsr.create_incrementally_cached_tables(share="amr_test_share_provider", primary_keys = {'random_db.random_table':'id'})
+dsr.create_remotely_linked_tables(share="delta_sharing")

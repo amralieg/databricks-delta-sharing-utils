@@ -43,7 +43,7 @@ dsp.share_table(table="my_database.my_table", enable_cdf=True)
 #### Examples for DeltaShareRecipient Class (to run by the Data Consumer)
 ```python
 # create a DeltaShareRecipient instance and point it to the share file location that was downloaded form the activation link
-dsr = DeltaShareRecipient('/dbfs/FileStore/tables/amr_azure_share.share')
+dsr = DeltaShareRecipient(share_profile_file_loc='/dbfs/FileStore/tables/amr_azure_share.share')
 
 # this will display a list of all shares, and what tables are shared
 dsr.discover()
