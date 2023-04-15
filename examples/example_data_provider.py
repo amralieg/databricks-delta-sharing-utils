@@ -3,6 +3,12 @@
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ### Delta Share Data Provider Example
+# MAGIC Run this on a single node cluster for single user, user that own the cluster must have ```CREATE CATALOG``` permission.
+
+# COMMAND ----------
+
 catalog = "__deltasharing_test_975__"
 spark.sql(f"drop catalog if exists {catalog} cascade");
 spark.sql(f"create catalog {catalog}");

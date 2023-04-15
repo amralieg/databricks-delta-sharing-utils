@@ -5,8 +5,7 @@
 
 # MAGIC %md
 # MAGIC ### Delta Share Recipient Example
-# MAGIC You must run this on a Single Node Cluster with Single User
-# MAGIC Before you run this example, make sure you create catalog _open_datasets_ using this command:
+# MAGIC Run this on a Single Node Cluster with Single User. Before you run this example, make sure you create catalog _open_datasets_ using this command:
 # MAGIC ```CREATE CATALOG _open_datasets_;```
 # MAGIC if you do not have create catalog permission, use catalog hive_metastore
 
