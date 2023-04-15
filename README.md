@@ -119,12 +119,12 @@ Add a recipient to the share. You can specify the Databricks workspace identifie
 ```python
 remove_recipient(recipient:str)
 ```
-Remove a recipient from the share.
+Remove a recipient from the share, recipient still exists after removal from share.
 
 ```python
 drop_recipient(recipient:str)
 ```
-Remove a recipient and all their permissions from the share.
+Drops the recipient, recipient will not exists afterwards.
 
 
 ### DeltaShareRecipient Class (python/data_recipient.ipynb)
