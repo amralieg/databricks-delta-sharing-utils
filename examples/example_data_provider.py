@@ -13,10 +13,10 @@
 
 # create a DeltaShareProvider instance for a share 'my_share' and to be shared with a recipient 'my_recipient'
 # after running this code, you will get an activation link to be shared with your recipient to download the share file
-dsp = DeltaShareProvider(share="my_share", recipient="my_recipient", drop_share_if_exists=True)
+dsp = DeltaShareProvider(share="my_share", recipient="my_recipient", drop_share_if_exists=True, drop_recipient_if_exists=True)
 
 # share a table with Change Data Feed enabled so the data recipient can incrementally load the data
-dsp.share_table(table="hive_metastore.delta_share_test.table1", enable_cdf=True)
+dsp.share_table(table="hive_metastore.__delta_share_test975_.table1", enable_cdf=True)
 
 # COMMAND ----------
 
