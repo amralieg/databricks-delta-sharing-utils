@@ -67,7 +67,7 @@ You can copy the entire code and use it in your Databricks notebook or import th
 The class allows you to share catalogs, databases, and tables to a recipient using a Databricks share. You can use the following methods to perform the actions.
 
 ```python
-DeltaShareProvider(share:str, recipient:str, recipient_sharing_identifier:str="", drop_share_if_exists:bool=False)
+DeltaShareProvider(share:str, recipient:str, recipient_sharing_identifier:str="", drop_share_if_exists:bool=False, drop_recipient_if_exists:bool=False)
 ```
 Create an instance of the class with the following parameters:
 
@@ -77,7 +77,9 @@ Create an instance of the class with the following parameters:
 
 **recipient_sharing_identifier**: (optional) The identifier of the Databricks workspace where the recipient resides. Required when sharing with external Databricks workspaces.
 
-**drop_share_if_exists**: (optional) Set to True to delete the recipient and the share if they already exist before creating them again.
+**drop_share_if_exists**: (optional) Set to True to delete the share if they already exist before creating them again.
+
+**drop_recipient_if_exists**: (optional) Set to True to delete the recipient if they already exist before creating them again.
 
 ```python
 share_catalog(catalog:str, enable_cdf:bool=False)
