@@ -21,3 +21,7 @@ dsr.discover()
 
 #start incremental sync of all tables inside the share 'amr_test_share_provider' which you discovered in the last step
 dsr.create_remotely_linked_tables(share="delta_sharing")
+
+# COMMAND ----------
+
+dsr = DeltaShareRecipient(share_profile_file_loc="https://oregon.cloud.databricks.com/delta_sharing/retrieve_config.html?VTtPsush22w17PnWn6hoZLH9tzMlj_xI07qsWmPJaOR3Dag5flZdywdJd7snMdxB", catalog="hive_metastore").create_fully_cached_tables(share="my_share")
