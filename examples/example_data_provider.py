@@ -3,12 +3,12 @@
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC drop catalog if exists __deltasharing_test_975__ cascade;
-# MAGIC create catalog __deltasharing_test_975__;
-# MAGIC create database __deltasharing_test_975__.__delta_share_test975__;
-# MAGIC create table __deltasharing_test_975__.__delta_share_test975__.table1 (id int, name string);
-# MAGIC insert into __deltasharing_test_975__.__delta_share_test975__.table1 values (1, "a"), (2, "b"), (3, "c");
+catalog = "__deltasharing_test_975__"
+spark.sql(f"drop catalog if exists {catalog} cascade");
+spark.sql(f"create catalog {catalog}");
+spark.sql(f"create database {catalog}.__delta_share_test975__");
+spark.sql(f"create table {catalog}.__delta_share_test975__.table1 (id int, name string)");
+spark.sql(f"insert into {catalog}.__delta_share_test975__.table1 values (1, 'a'), (2, 'b'), (3, 'c')");
 
 # COMMAND ----------
 
@@ -17,11 +17,10 @@
 dsp = DeltaShareProvider(share="my_share", recipient="my_recipient", drop_share_if_exists=True, drop_recipient_if_exists=True)
 
 # share a table with Change Data Feed enabled so the data recipient can incrementally load the data
-dsp.share_table(table="__deltasharing_test_975__.__delta_share_test975__.table1", enable_cdf=True)
+dsp.share_table(table=f"{catalog}.__delta_share_test975__.table1", enable_cdf=True)
 
 # COMMAND ----------
 
-# MAGIC %sql 
-# MAGIC update __deltasharing_test_975__.__delta_share_test975__.table1 set name="d" where id=3;
-# MAGIC delete from __deltasharing_test_975__.__delta_share_test975__.table1 where id=1;
-# MAGIC insert into __deltasharing_test_975__.__delta_share_test975__.table1 values (4, "d"), (5, "e"), (6, "f");
+spark.sql(f"update {catalog}.__delta_share_test975__.table1 set name='d' where id=3;")
+spark.sql(f"delete from {catalog}.__delta_share_test975__.table1 where id=1;")
+spark.sql(f"insert into {catalog}.__delta_share_test975__.table1 values (4, 'd'), (5, 'e'), (6, 'f');")
