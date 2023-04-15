@@ -18,9 +18,9 @@ spark.sql(f"insert into {catalog}.__delta_share_test975__.table1 values (1, 'a')
 
 # COMMAND ----------
 
-# create a DeltaShareProvider instance for a share 'my_share' and to be shared with a recipient 'my_recipient'
+# create a DeltaShareProvider instance for a share 'test_delta_share' and to be shared with a recipient 'test_delta_recipient'
 # after running this code, you will get code to be shared with your recipient and run it at their end
-dsp = DeltaShareProvider(share="my_share", recipient="my_recipient", drop_share_if_exists=True, drop_recipient_if_exists=True)
+dsp = DeltaShareProvider(share="test_delta_share123", recipient="test_delta_recipient123", drop_share_if_exists=True, drop_recipient_if_exists=True)
 
 # share a table with Change Data Feed enabled so the data recipient can incrementally load the data
 dsp.share_table(table=f"{catalog}.__delta_share_test975__.table1", enable_cdf=True)
