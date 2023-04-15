@@ -13,7 +13,7 @@
 # COMMAND ----------
 
 # initialise data recipient class, with an open datasets share profile.
-dsr = DeltaShareRecipient(share_profile_file_loc="https://databricks-datasets-oregon.s3-us-west-2.amazonaws.com/delta-sharing/share/open-datasets.share", catalog="_open_datasets_")
+dsr = DeltaShareRecipient(share_profile_file_loc="https://databricks-datasets-oregon.s3-us-west-2.amazonaws.com/delta-sharing/share/open-datasets.share", catalog="hive_metastore", table_prefix="deltashare_")
 #run discover to list all available shares to you, so you pick one of these share to use it in the next call
 dsr.discover()
 
@@ -21,3 +21,7 @@ dsr.discover()
 
 #start incremental sync of all tables inside the share 'amr_test_share_provider' which you discovered in the last step
 dsr.create_remotely_linked_tables(share="delta_sharing")
+
+# COMMAND ----------
+
+# MAGIC %sql select * from hive_metastore.default.deltashare_COVID_19_NYT limit 10;
