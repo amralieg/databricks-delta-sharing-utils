@@ -24,3 +24,18 @@ dsp.share_table(table="hive_metastore.__delta_share_test975_.table1", enable_cdf
 # MAGIC update hive_metastore.__delta_share_test975_.table1 set name="d" where id=3;
 # MAGIC delete from hive_metastore.__delta_share_test975_.table1 where id=1;
 # MAGIC insert into hive_metastore.__delta_share_test975_.table1 values (4, "d"), (5, "e"), (6, "f");
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC ALTER SHARE my_share ADD TABLE hive_metastore.__delta_share_test975_.table1 WITH HISTORY;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC describe catalog hive_metastore
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC describe share my_share;
