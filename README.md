@@ -42,8 +42,8 @@ dsp.share_table(table="my_database.my_table", enable_cdf=True)
 
 #### Examples for DeltaShareRecipient Class (to run by the Data Consumer)
 ```python
-# create a DeltaShareRecipient instance and point it to the share file location that was downloaded form the activation link
-dsr = DeltaShareRecipient(share_profile_file_loc='/dbfs/FileStore/tables/amr_azure_share.share')
+# create a DeltaShareRecipient instance and point it to the share file location
+dsr = DeltaShareRecipient(share_profile_file_loc='https://databricks-datasets-oregon.s3-us-west-2.amazonaws.com/delta-sharing/share/open-datasets.share')
 
 # this will display a list of all shares, and what tables are shared
 dsr.discover()
@@ -146,7 +146,7 @@ DeltaShareRecipient(share_profile_file_loc:str="", provider_sharing_identifier:s
 ```
 This method initializes the class with the given parameters.
 
-**share_profile_file_loc (str)**: The path to the share file on dbfs or any other cloud storage location, if you provided this, do not provide provider_sharing_identifier.
+**share_profile_file_loc (str)**: The URL or the path to the share file on dbfs or any other cloud storage location, if you provided this, do not provide provider_sharing_identifier.
 
 **provider_sharing_identifier (str)**: Databricks sharing identifier of the provider of the data, if you provided this, do not provide share_profile_file_loc.
 
