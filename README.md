@@ -10,6 +10,9 @@ Databricks Delta Sharing utils includes set of python notebooks that makes it ve
 3- Mount table locally at the recipient side as managed **incremental replica** table of the tables at the provider side
 
 
+Read a full description about these approaches in [this medium post](https://amralieg.medium.com/delta-sharing-how-to-save-on-egress-costs-using-cached-data-and-incremental-change-data-feeds-a88b74543a4c).
+
+
 ## How it works
 
 These utilities are organised in 2 main notebooks, python/data_provider.ipynb and python/data_recipient.ipynb.
